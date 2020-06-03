@@ -1,10 +1,11 @@
 import re
 import os
-import pathlib
 import pyocr
 from PIL import Image
 import pandas as pd
-
+import cv2
+import pathlib
+import numpy as np
 
 def get_targets(img_dir):
     # ファイル内の変換対象全取得
@@ -85,3 +86,111 @@ def get_box2(tool, builder, im):
                 crop_text.extend(['無効'] * (7 - len(crop_text)))
             result_eva.append(crop_text)
     return result_eva
+
+
+def delete_line(path):
+    # 書き込み用path
+    p = (path.stem + '{}').format('_cut.jpg')
+    write_path = pathlib.PurePath.joinpath(path.parent, p)
+    # cv2で画像読み込み
+    img_array = np.fromfile(path, dtype=np.uint8)
+    img = cv2.imdecode(img_array, 0)
+
+    # 処理範囲切り取り
+    x, y = 355, 870
+    h = int(img.shape[0] - img.shape[0] / 3)  # 2388
+    w = int(img.shape[1] - img.shape[1] / 4)  # 1652
+    roi = img[y:y + h, x:x + w]
+    # 書き込み用画作成
+    origin = roi.copy()
+
+    # 白黒反転処理
+    roi2 = cv2.bitwise_not(roi)
+    # エッジ検出
+    edge = cv2.Canny(roi2, 240, 250)
+    # 膨張処理
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    edge = cv2.dilate(edge, kernel)
+    # 直線検出1回目
+    lines1 = cv2.HoughLinesP(edge, rho=1, theta=np.pi / 360, threshold=32, minLineLength=50, maxLineGap=9)
+    # 線を消す(白で線を引く)
+    for line in lines1:
+        x1, y1, x2, y2 = line[0]
+        no_lines_img = cv2.line(origin, (x1, y1), (x2, y2), (255, 255, 255), 3)
+        imwrite(write_path, no_lines_img)
+
+    # 2回目処理用画像読み込み
+    array = np.fromfile(write_path, dtype=np.uint8)
+    no_line = cv2.imdecode(array, cv2.IMREAD_COLOR)
+    # 書き込み用画作成
+    write = no_line.copy()
+    # 白黒反転処理
+    no_line = cv2.bitwise_not(no_line)
+    # エッジ検出
+    no_line = cv2.Canny(no_line, 240, 250)
+    # 膨張処理
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    no_line = cv2.dilate(no_line, kernel)
+    # 直線検出2回目
+    lines2 = cv2.HoughLinesP(no_line, rho=1, theta=np.pi / 360, threshold=5, minLineLength=40, maxLineGap=15)
+    # 線を消す(白で線を引く)
+    for line in lines2:
+        x1, y1, x2, y2 = line[0]
+        no_lines_img2 = cv2.line(write, (x1, y1), (x2, y2), (255, 255, 255), 3)
+        imwrite(write_path, no_lines_img2)
+
+    print(write_path.stem, 'を作成しました。')
+    return write_path
+
+
+# パスに日本語が含まれている場合はcv2.imwrite使えないからこっち（ただのimwrite()）
+def imwrite(filename, img, params=None):
+    try:
+        ext = os.path.splitext(filename)[1]
+        result, n = cv2.imencode(ext, img, params)
+
+        if result:
+            with open(filename, mode='w+b') as f:
+                n.tofile(f)
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(e)
+        return False
+
+
+def get_table(tool, builder, im):
+    table_texts = []
+    for i in range(12):
+        a = 0
+        b = 12
+        c = 1754
+        d = 48
+        crop = (a, b + (50 * i), c, d + (50 * i))
+        crop_img = im.crop(crop)
+        table_text = tool.image_to_string(crop_img, lang="jpn", builder=builder).split()
+        if len(table_text) == 0:
+            continue
+        table_texts.append(table_text)
+    return table_texts
+
+
+def get_name(tool, builder, im):
+    c_names = []
+    for i in range(12):
+        a = -(101 - 101)
+        b = -(878 - 929)
+        c = -(355 - 355)
+        d = -(926 - 977)
+
+        crop = (101 + (a * i), 878 + (b * i), 355 + (c * i), 926 + (d * i))
+
+        crop_img = im.crop(crop)
+        name = tool.image_to_string(crop_img, lang="jpn", builder=builder).split()
+        if not name:
+            continue
+        name = name[0] + name[1]
+        c_names.append(name)
+    return c_names
+
