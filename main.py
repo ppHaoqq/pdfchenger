@@ -1,5 +1,5 @@
 from pdf2jpg import pdf2jpg
-from functions import get_targets, get_box3, get_box1, get_box2, delete_line, get_table, get_name
+from functions import get_targets, get_box3, get_box1, get_box2, delete_line, get_table, get_name, crop2, delete_line2
 
 from pathlib import Path, PurePath
 import os
@@ -42,7 +42,7 @@ for pdf in pdf_files:
 tools = pyocr.get_available_tools()
 tool = tools[0]
 text_builder = pyocr.builders.TextBuilder()
-tabele_buildr = pyocr.builders.DigitBuilder(tesseract_layout=6)
+table_builder = pyocr.builders.DigitBuilder(tesseract_layout=6)
 
 
 # ファイル内の変換対象全取得
@@ -60,21 +60,23 @@ cols = base_cols + table_cols
 df = pd.DataFrame(index=[], columns=cols)
 df = df.set_index('社名')
 
-# df_q = pd.DataFrame(index=[], columns=cols)
-
 text_dir = pathlib.PurePath.joinpath(pathlib.Path.cwd(), 'out_txts')
-text_path = pathlib.PurePath.joinpath(text_dir, 'base_df.csv')
+if not text_dir.exists():
+    text_dir.mkdir()
+base_path = pathlib.PurePath.joinpath(text_dir, 'base_df.csv')
 
 
 result_data = []
 result_eva = []
 result_table = []
+
 for i, imgs in enumerate(targets):
     print(i+1, '/', len(targets), 'ファイル変換中', sep='')
     for img in imgs:
         im = Image.open(img)
         # 1ページ目（調書）読み取り
         if '1' in img.stem:
+            print('1ページ目（調書）読み取り中')
             # BOX3を読み取り
             box3 = get_box3(tool, text_builder, im)
             # BOX1を読み取り
@@ -83,26 +85,43 @@ for i, imgs in enumerate(targets):
             # BOX2を読み取り
             box2 = get_box2(tool, text_builder, im)
             result_eva.append(box2)
+        elif '_cut' in img.stem:
+            continue
         # 2ページ目(表)読み取り
         else:
-            # 読み取り用処理（罫線削除）
-            no_line_path = delete_line(img)
-            no_line_img = Image.open(no_line_path)
-            tables = get_table(tool, tabele_buildr, no_line_img)
-            result_table.append(tables)
-            # c_names = get_name(tool, text_builder, im)
-            # for c_name, table in zip(c_names, tables):
-            #     table.insert(0, c_name)
-            #     result_table.append(table)
+            print('2ページ目(表)読み取り中')
+            c_list = crop2(img)
+            for i, crop_img in enumerate(c_list):
+                no_line_path = delete_line2(crop_img, img, i)
+                no_line_img = Image.open(no_line_path)
+                # os.remove(no_line_path)
+                table_text = tool.image_to_string(no_line_img, lang="jpn", builder=table_builder).split()
+                if len(table_text) < 18:
+                    continue
+                result_table.append(table_text)
 
     # まとめてdf化
-for re, rt in zip(result_eva, result_table):
-    r = result_data + re + rt
-    sd = pd.Series(r, index=cols+table_cols)
-    df = df.append(sd, ignore_index=True)
-    df = df.set_index('社名')
+for rd, r_e, rt in zip(result_data, result_eva, result_table):
+    for rr_e, rrt in zip(r_e, rt):
+        r = rd + rr_e + rrt
+        if len(r) <= 33:
+            c = 33 - len(r)
+            for i in range(c):
+                r2 = r.append('読み取り失敗')
+                sd = pd.Series(r2, index=cols)
+        elif len(r) >= 33:
+            c = len(r) - 33
+            for i in range(c):
+                r2 = r.pop(i+12)
+                sd = pd.Series(r2, index=cols)
 
-print(df)
+        sd = pd.Series(r, index=cols)
+        df = df.append(sd, ignore_index=True)
+        df.to_csv(base_path)
+
+# 大本のファイル保存
+# df = df.set_index('社名')
+
 
 # print(result_eva)
 # print(result_data)

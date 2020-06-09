@@ -27,10 +27,6 @@ def get_box3(tool, builder, im):
     crop_4 = im.crop(box4)
     crop_5 = im.crop(box5)
 
-    # tools = pyocr.get_available_tools()
-    # tool = tools[0]
-    # builder = pyocr.builders.TextBuilder()
-
     title = tool.image_to_string(crop_3, lang="jpn", builder=builder)
     result_data.append(title)
     office = tool.image_to_string(crop_4, lang="jpn", builder=builder)
@@ -48,10 +44,6 @@ def get_box1(tool, builder, im):
     box2 = (1310, 243, 2071, 283)
     crop_1 = im.crop(box1).resize((710, 40), Image.LANCZOS)
     crop_2 = im.crop(box2).resize((710, 40), Image.LANCZOS)
-
-    # tools = pyocr.get_available_tools()
-    # tool = tools[0]
-    # builder = pyocr.builders.TextBuilder()
 
     schedul_price = tool.image_to_string(crop_1, lang="jpn", builder=builder)
     schedul_price = schedul_price.replace(' ', '').replace('\n', '')
@@ -92,55 +84,58 @@ def delete_line(path):
     # 書き込み用path
     p = (path.stem + '{}').format('_cut.jpg')
     write_path = pathlib.PurePath.joinpath(path.parent, p)
-    # cv2で画像読み込み
-    img_array = np.fromfile(path, dtype=np.uint8)
-    img = cv2.imdecode(img_array, 0)
+    if pathlib.Path(write_path).exists():
+        return write_path
+    else:
+        # cv2で画像読み込み
+        img_array = np.fromfile(path, dtype=np.uint8)
+        img = cv2.imdecode(img_array, 0)
 
-    # 処理範囲切り取り
-    x, y = 355, 870
-    h = int(img.shape[0] - img.shape[0] / 3)  # 2388
-    w = int(img.shape[1] - img.shape[1] / 4)  # 1652
-    roi = img[y:y + h, x:x + w]
-    # 書き込み用画作成
-    origin = roi.copy()
+        # 処理範囲切り取り
+        x, y = 355, 870
+        h = int(img.shape[0] - img.shape[0] / 3)  # 2388
+        w = int(img.shape[1] - img.shape[1] / 4)  # 1652
+        roi = img[y:y + h, x:x + w]
+        # 書き込み用画作成
+        origin = roi.copy()
 
-    # 白黒反転処理
-    roi2 = cv2.bitwise_not(roi)
-    # エッジ検出
-    edge = cv2.Canny(roi2, 240, 250)
-    # 膨張処理
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    edge = cv2.dilate(edge, kernel)
-    # 直線検出1回目
-    lines1 = cv2.HoughLinesP(edge, rho=1, theta=np.pi / 360, threshold=32, minLineLength=50, maxLineGap=9)
-    # 線を消す(白で線を引く)
-    for line in lines1:
-        x1, y1, x2, y2 = line[0]
-        no_lines_img = cv2.line(origin, (x1, y1), (x2, y2), (255, 255, 255), 3)
-        imwrite(write_path, no_lines_img)
+        # 白黒反転処理
+        roi2 = cv2.bitwise_not(roi)
+        # エッジ検出
+        edge = cv2.Canny(roi2, 240, 250)
+        # 膨張処理
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        edge = cv2.dilate(edge, kernel)
+        # 直線検出1回目
+        lines1 = cv2.HoughLinesP(edge, rho=1, theta=np.pi / 360, threshold=32, minLineLength=50, maxLineGap=9)
+        # 線を消す(白で線を引く)
+        for line in lines1:
+            x1, y1, x2, y2 = line[0]
+            no_lines_img = cv2.line(origin, (x1, y1), (x2, y2), (255, 255, 255), 3)
+            imwrite(write_path, no_lines_img)
 
-    # 2回目処理用画像読み込み
-    array = np.fromfile(write_path, dtype=np.uint8)
-    no_line = cv2.imdecode(array, cv2.IMREAD_COLOR)
-    # 書き込み用画作成
-    write = no_line.copy()
-    # 白黒反転処理
-    no_line = cv2.bitwise_not(no_line)
-    # エッジ検出
-    no_line = cv2.Canny(no_line, 240, 250)
-    # 膨張処理
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    no_line = cv2.dilate(no_line, kernel)
-    # 直線検出2回目
-    lines2 = cv2.HoughLinesP(no_line, rho=1, theta=np.pi / 360, threshold=5, minLineLength=40, maxLineGap=15)
-    # 線を消す(白で線を引く)
-    for line in lines2:
-        x1, y1, x2, y2 = line[0]
-        no_lines_img2 = cv2.line(write, (x1, y1), (x2, y2), (255, 255, 255), 3)
-        imwrite(write_path, no_lines_img2)
+        # 2回目処理用画像読み込み
+        array = np.fromfile(write_path, dtype=np.uint8)
+        no_line = cv2.imdecode(array, cv2.IMREAD_COLOR)
+        # 書き込み用画作成
+        write = no_line.copy()
+        # 白黒反転処理
+        no_line = cv2.bitwise_not(no_line)
+        # エッジ検出
+        no_line = cv2.Canny(no_line, 240, 250)
+        # 膨張処理
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        no_line = cv2.dilate(no_line, kernel)
+        # 直線検出2回目
+        lines2 = cv2.HoughLinesP(no_line, rho=1, theta=np.pi / 360, threshold=5, minLineLength=40, maxLineGap=15)
+        # 線を消す(白で線を引く)
+        for line in lines2:
+            x1, y1, x2, y2 = line[0]
+            no_lines_img2 = cv2.line(write, (x1, y1), (x2, y2), (255, 255, 255), 3)
+            imwrite(write_path, no_lines_img2)
 
-    print(write_path.stem, 'を作成しました。')
-    return write_path
+        print(write_path.stem, 'を作成しました。')
+        return write_path
 
 
 # パスに日本語が含まれている場合はcv2.imwrite使えないからこっち（ただのimwrite()）
@@ -160,7 +155,7 @@ def imwrite(filename, img, params=None):
         return False
 
 
-def get_table(tool, builder, im):
+def get_table(tool, builder, img):
     table_texts = []
     for i in range(12):
         a = 0
@@ -168,7 +163,7 @@ def get_table(tool, builder, im):
         c = 1754
         d = 48
         crop = (a, b + (50 * i), c, d + (50 * i))
-        crop_img = im.crop(crop)
+        crop_img = img.crop(crop)
         table_text = tool.image_to_string(crop_img, lang="jpn", builder=builder).split()
         if len(table_text) == 0:
             continue
@@ -193,4 +188,72 @@ def get_name(tool, builder, im):
         name = name[0] + name[1]
         c_names.append(name)
     return c_names
+
+
+# crop
+def crop2(path):
+    crop_list = []
+    img = Image.open(path)
+    for i in range(11):
+        a = 363
+        b = 875
+        c = 2095
+        d = 923
+        crop = (a, (b+(3*i)+(48*i)), c, (d+(3*i)+(48*i)))
+        crop_img = img.crop(crop)
+        crop_list.append(crop_img)
+    return crop_list
+
+
+# delete_line
+def delete_line2(p_img, path, count):
+    # pil 2 cv2
+    c_img = np.array(p_img, dtype=np.uint8)
+
+    # 書き込み用path
+    p = (path.stem + '_cut_{}.jpg').format(count + 1)
+    write_path = pathlib.PurePath.joinpath(path.parent, p)
+    if pathlib.Path(write_path).exists():
+        return write_path
+    else:
+        # 書き込み用画作成
+        origin = c_img.copy()
+        # 白黒反転処理
+        reverse = cv2.bitwise_not(c_img)
+        # エッジ検出
+        edge = cv2.Canny(reverse, 240, 250)
+        # 膨張処理
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        edge = cv2.dilate(edge, kernel)
+        # 直線検出1回目
+        lines1 = cv2.HoughLinesP(edge, rho=1, theta=np.pi / 360, threshold=0, minLineLength=22, maxLineGap=5)
+        # 線を消す(白で線を引く)
+        for line in lines1:
+            x1, y1, x2, y2 = line[0]
+            no_lines_img = cv2.line(origin, (x1, y1), (x2, y2), (255, 255, 255), 3)
+            imwrite(write_path, no_lines_img)
+
+        #         # 2回目処理用画像読み込み
+        #         array = np.fromfile(write_path, dtype=np.uint8)
+        #         no_line = cv2.imdecode(array, cv2.IMREAD_COLOR)
+
+        #         # 書き込み用画作成
+        #         write = no_line.copy()
+        #         # 白黒反転処理
+        #         no_line = cv2.bitwise_not(no_line)
+        #         # エッジ検出
+        #         no_line = cv2.Canny(no_line, 240, 250)
+        #         # 膨張処理
+        #         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        #         no_line = cv2.dilate(no_line, kernel)
+        #         # 直線検出2回目
+        #         lines2 = cv2.HoughLinesP(no_line, rho=1, theta=np.pi / 360, threshold=5, minLineLength=40, maxLineGap=15)
+        #         # 線を消す(白で線を引く)
+        #         for line in lines2:
+        #             x1, y1, x2, y2 = line[0]
+        #             no_lines_img2 = cv2.line(write, (x1, y1), (x2, y2), (255, 255, 255), 3)
+        #             imwrite(write_path, no_lines_img2)
+
+        print(write_path.stem, 'を処理しました。')
+        return write_path
 
