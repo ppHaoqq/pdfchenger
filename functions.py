@@ -62,21 +62,39 @@ def get_box1(tool, builder, im):
 def get_box2(tool, builder, im):
     result_eva = []
     for count in range(12):
-        a = 121
-        b = 620
-        c = 1440
-        d = 693
-        box_cal = (a, b + (77 * count), c, d + (71 * count))
+        # 社名読み取り
+        x = 122
+        y = 624
+        z = 631
+        q = 689
+        box_name = (x, y + (4 * count) + (68 * count), z, q + (4 * count) + (68 * count))
+        crop_name = im.crop(box_name)
+        c_name = tool.image_to_string(crop_name, lang="jpn", builder=builder).split()
+        if len(c_name) == 0:
+            continue
+        if len(c_name) == 1:
+            name = c_name[0]
+        else:
+            name = c_name[0] + c_name[1]
+
+        # 点数読み取り
+        a = 635
+        b = 624
+        c = 1435
+        d = 689
+        box_cal = (a, b + (4 * count) + (68 * count), c, d + (4 * count) + (68 * count))
         crop_im = im.crop(box_cal)
-        crop_text = tool.image_to_string(crop_im, lang="jpn", builder=builder).split()
-        if not len(crop_text) == 0:
-            name = crop_text[0] + crop_text[1]
-            del crop_text[0]
-            del crop_text[0]
-            crop_text.insert(0, name)
-            if len(crop_text) <= 3:
-                crop_text.extend(['無効'] * (7 - len(crop_text)))
-            result_eva.append(crop_text)
+        crop_table = tool.image_to_string(crop_im, lang="jpn", builder=builder).split()
+        if '|' in crop_table:
+            crop_table.remove('|')
+        if '」' in crop_table:
+            crop_table.remove('」')
+        if 'ーー' in crop_table:
+            crop_table.remove('ーー')
+        if len(crop_table) <= 3:
+            crop_table.extend(['無効'] * (6 - len(crop_table)))
+        crop_table.insert(0, name)
+        result_eva.append(crop_table)
     return result_eva
 
 
