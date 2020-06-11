@@ -63,112 +63,141 @@ text_dir = pathlib.PurePath.joinpath(pathlib.Path.cwd(), 'out_txts')
 if not text_dir.exists():
     text_dir.mkdir()
 base_path = pathlib.PurePath.joinpath(text_dir, 'base_df.csv')
+excel_path = pathlib.PurePath.joinpath(text_dir, 'base_df.xlsx')
 
 result_data = []
 result_eva = []
 result_table = []
 
-if base_path.exists():
+if base_path.exists(): # 既存のファイルに結果を追記
+    df = pd.read_csv(base_path)
     base = pd.read_csv(base_path)
     flag_list = list(set(base['flag'].values.tolist()))
-    print(flag_list)
     for i, imgs in enumerate(targets):
         print(i + 1, '/', len(targets), 'ファイル確認中', sep='')
         flag = imgs[0].parent.stem
-        print(flag)
-#         if flag in flag_list:
-#             continue
-#         print(i + 1, '/', len(targets), 'ファイル変換中', sep='')
-#         flag = imgs[0].parent.stem
-#         for img in imgs:
-#             im = Image.open(img)
-#             # 1ページ目（調書）読み取り
-#             if '-1' in img.stem:
-#                 print('1ページ目（調書）読み取り中')
-#                 # BOX3を読み取り
-#                 box3 = get_box3(tool, text_builder, im)
-#                 # BOX1を読み取り
-#                 box1 = get_box1(tool, text_builder, im)
-#                 result_data.append(box3 + box1)
-#                 # BOX2を読み取り
-#                 box2 = get_box2(tool, text_builder, im)
-#                 result_eva.append(box2)
-#             elif '_cut' in img.stem:
-#                 continue
-#             # 2ページ目(表)読み取り
-#             elif '-2' in img.stem:
-#                 print('2ページ目(表)読み取り中')
-#                 c_list = crop2(img)
-#                 for i, crop_img in enumerate(c_list):
-#                     no_line_path = delete_line2(crop_img, img, i)
-#                     no_line_img = Image.open(no_line_path)
-#                     table_text = tool.image_to_string(no_line_img, lang="jpn", builder=table_builder).split()
-#                     if len(table_text) < 18:
-#                         continue
-#                     table_text.append(flag)
-#                     result_table.append(table_text)
-# else:
-#     for i, imgs in enumerate(targets):
-#         print(i + 1, '/', len(targets), 'ファイル変換中', sep='')
-#         flag = imgs[0].parent.stem
-#         for img in imgs:
-#             im = Image.open(img)
-#             # 1ページ目（調書）読み取り
-#             if '-1' in img.stem:
-#                 print('1ページ目（調書）読み取り中')
-#                 # BOX3を読み取り
-#                 box3 = get_box3(tool, text_builder, im)
-#                 # BOX1を読み取り
-#                 box1 = get_box1(tool, text_builder, im)
-#                 result_data.append(box3 + box1)
-#                 # BOX2を読み取り
-#                 box2 = get_box2(tool, text_builder, im)
-#                 result_eva.append(box2)
-#             elif '_cut' in img.stem:
-#                 continue
-#             # 2ページ目(表)読み取り
-#             elif '-2' in img.stem:
-#                 print('2ページ目(表)読み取り中')
-#                 c_list = crop2(img)
-#                 for i, crop_img in enumerate(c_list):
-#                     no_line_path = delete_line2(crop_img, img, i)
-#                     no_line_img = Image.open(no_line_path)
-#                     table_text = tool.image_to_string(no_line_img, lang="jpn", builder=table_builder).split()
-#                     if len(table_text) < 18:
-#                         continue
-#                     table_text.append(flag)
-#                     result_table.append(table_text)
-#
-# # まとめてdf化
-# if base_path.exists():
-#     df = pd.read_csv(base_path)
-# else:
-#     df = pd.DataFrame(index=[], columns=cols)
-# for rd, r_e, rt in zip(result_data, result_eva, result_table):
-#     for rr_e in r_e:
-#         r = rd + rr_e + rt
-#         if len(r) < 34:
-#             c = 34 - len(r)
-#             for i in range(c):
-#                 r.insert(-1, '読み取り失敗')
-#         elif len(r) > 34:
-#             c = len(r) - 34
-#             for i in range(c):
-#                 r.pop(i+12)
-#         sd = pd.Series(r, index=cols)
-#         df = df.append(sd, ignore_index=True)
-#
-#
-# # 大本のファイル保存
-# df = df.set_index('社名')
-# df.to_csv(base_path)
-#
-# # 社名ごとに保存
-# base = pd.read_csv(base_path)
-# name_list = list(base['社名'])
-# # set() 社名リストから重複分を削除
-# c_names = list(set(name_list))
-# for c_name in c_names:
-#     name_path = pathlib.PurePath.joinpath(text_dir, '{}_df.csv'.format(c_name))
-#     name_data = base.loc[base['社名']==c_name]
-#     name_data.to_csv(name_path)
+        if flag in flag_list:
+            continue
+        else:
+            print(i + 1, '/', len(targets), 'ファイル変換中', sep='')
+            for img in imgs:
+                flag = img.parent.stem
+                im = Image.open(img)
+                # 1ページ目（調書）読み取り
+                if 'pg-1' in img.stem:
+                    print('1ページ目（調書）読み取り中')
+                    # BOX3を読み取り
+                    box3 = get_box3(tool, text_builder, im)
+                    # BOX1を読み取り
+                    box1 = get_box1(tool, text_builder, im)
+                    result_data.append(box3 + box1)
+                    # BOX2を読み取り
+                    box2 = get_box2(tool, text_builder, im)
+                    result_eva.append(box2)
+                elif '_cut' in img.stem:
+                    continue
+                # 2ページ目(表)読み取り
+                elif 'pg-2' in img.stem:
+                    print('2ページ目(表)読み取り中')
+                    result_tables = []
+                    c_list = crop2(img)
+                    for i, crop_img in enumerate(c_list):
+                        no_line_path = delete_line2(crop_img, img, i)
+                        no_line_img = Image.open(no_line_path)
+                        table_text = tool.image_to_string(no_line_img, lang="jpn", builder=table_builder).split()
+                        if len(table_text) < 18:
+                            continue
+                        table_text.append(flag)
+                        result_tables.append(table_text)
+                    result_table.append(result_tables)
+
+    count = -1
+    for eva, table in zip(result_eva, result_table):
+        count += 1
+        for r_e, rt in zip(eva, table):
+            rd = result_data[count]
+            r = rd + r_e + rt
+            if len(r) < 34:
+                c = 34 - len(r)
+                for i in range(c):
+                    r.insert(-1, '読み取り失敗')
+            elif len(r) > 34:
+                c = len(r) - 34
+                for i in range(c):
+                    r.pop(i + 12)
+            sd = pd.Series(r, index=cols)
+            df = df.append(sd, ignore_index=True)
+    df = df.set_index('社名')
+    df.to_csv(base_path, mode='a')
+    df.to_excel(excel_path, mode='a')
+
+else: # 新規で保存先を作成
+    df = pd.DataFrame(index=[], columns=cols)
+    for i, imgs in enumerate(targets):
+        print(i + 1, '/', len(targets), 'ファイル変換中', sep='')
+        for img in imgs:
+            flag = img.parent.stem
+            im = Image.open(img)
+            # 1ページ目（調書）読み取り
+            if 'pg-1' in img.stem:
+                print('1ページ目（調書）読み取り中')
+                # BOX3を読み取り
+                box3 = get_box3(tool, text_builder, im)
+                # BOX1を読み取り
+                box1 = get_box1(tool, text_builder, im)
+                result_data.append(box3 + box1)
+                # BOX2を読み取り
+                box2 = get_box2(tool, text_builder, im)
+                result_eva.append(box2)
+            elif '_cut' in img.stem:
+                continue
+            # 2ページ目(表)読み取り
+            elif 'pg-2' in img.stem:
+                print('2ページ目(表)読み取り中')
+                result_tables = []
+                c_list = crop2(img)
+                for i, crop_img in enumerate(c_list):
+                    no_line_path = delete_line2(crop_img, img, i)
+                    no_line_img = Image.open(no_line_path)
+                    table_text = tool.image_to_string(no_line_img, lang="jpn", builder=table_builder).split()
+                    if len(table_text) < 18:
+                        continue
+                    table_text.append(flag)
+                    result_tables.append(table_text)
+                result_table.append(result_tables)
+    count = -1
+    for eva, table in zip(result_eva, result_table):
+        count += 1
+        for r_e, rt in zip(eva, table):
+            rd = result_data[count]
+            r = rd + r_e + rt
+            if len(r) < 34:
+                c = 34 - len(r)
+                for i in range(c):
+                    r.insert(-1, '読み取り失敗')
+            elif len(r) > 34:
+                c = len(r) - 34
+                for i in range(c):
+                    r.pop(i + 12)
+            sd = pd.Series(r, index=cols)
+            df = df.append(sd, ignore_index=True)
+    df = df.set_index('社名')
+    df.to_csv(base_path)
+    df.to_excel(excel_path)
+
+#社名ごとに保存
+base = pd.read_csv(base_path)
+name_list = list(base['社名'])
+# set() 社名リストから重複分を削除
+c_names = list(set(name_list))
+for c_name in c_names:
+    name_path = pathlib.PurePath.joinpath(text_dir, '{}_df.csv'.format(c_name))
+    name_excel = pathlib.PurePath.joinpath(text_dir, '{}_df.xlsx'.format(c_name))
+    if name_path.exists():
+        name_data = base.loc[base['社名'] == c_name]
+        name_data.to_csv(name_path, mode='a')
+        name_data.to_excel(name_excel, mode='a')
+    else:
+        name_data = base.loc[base['社名'] == c_name]
+        name_data.to_csv(name_path)
+        name_data.to_excel(name_excel)

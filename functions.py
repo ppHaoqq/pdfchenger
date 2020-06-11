@@ -231,7 +231,7 @@ def delete_line2(p_img, path, count):
     # 書き込み用path
     p = (path.stem + '_cut_{}.jpg').format(count + 1)
     write_path = pathlib.PurePath.joinpath(path.parent, p)
-    if pathlib.Path(write_path).exists():
+    if write_path.exists():
         return write_path
     else:
         # 書き込み用画作成
