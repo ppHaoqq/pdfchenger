@@ -186,6 +186,7 @@ else: # 新規で保存先を作成
     df.to_excel(excel_path)
 
 #社名ごとに保存
+
 base = pd.read_csv(base_path)
 name_list = list(base['社名'])
 # set() 社名リストから重複分を削除
