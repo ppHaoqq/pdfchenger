@@ -38,7 +38,10 @@ for excel_path in file_list:
 
     name = excel_path.stem
     e_score = ws['K2'].value
-    e_row = [s.row for s in list(ws.columns)[1] if s.value == e_score][0]
+    try:
+        e_row = [s.row for s in list(ws.columns)[1] if s.value == e_score][0]
+    except IndexError:
+        e_row = 1
     engineer = ws['A{}'.format(e_row)].value
     c_score = ws['K1'].value
     eva_score = ws['K3'].value
@@ -167,10 +170,10 @@ for cell in rows[max_row - 1]:
 # 式に変更
 # 金額列をカンマ.number_format = "#,##0"、少数を統一f.number_format = "#,##0.0"
 # 参考資料：https://pg-chain.com/python-excel-format
-for e, f, i, j, l, m, o in zip(cols[4], cols[5], cols[8], cols[9], cols[11], cols[12], cols[14]):
+for e, f, i, j, l, m, n, o in zip(cols[4], cols[5], cols[8], cols[9], cols[11], cols[12], cols[13], cols[14]):
     if (str(e.value).isnumeric() and type(f.value) == float or type(f.value) == int and
             type(i.value) == float or type(i.value) == int and str(l.value).isnumeric() and
-            str(j.value).isnumeric() and type(m.value) == int and type(o.value) == float):
+            str(j.value).isnumeric() and type(m.value) == int and type(o.value) == float and type(n.value) == float):
         ws[e.coordinate] = '=SUM(C{0}:D{0})'.format(e.row)
         ws[f.coordinate] = '=E{} * 0.277'.format(f.row)
         ws[i.coordinate] = '=SUM(F{0}:H{0})'.format(i.row)
@@ -180,8 +183,9 @@ for e, f, i, j, l, m, o in zip(cols[4], cols[5], cols[8], cols[9], cols[11], col
         ws[f.coordinate].number_format = "#,##0.0"
         ws[i.coordinate].number_format = "#,##0.0"
         ws[j.coordinate].number_format = "#,##0"
-        ws[l.coordinate].number_format = "#,##0.0"
+        ws[l.coordinate].number_format = "#,##0"
         ws[m.coordinate].number_format = "#,##0"
+        ws[n.coordinate].number_format = "#,##0.0"
         ws[o.coordinate].number_format = "#,##0.0"
 
 wb.save(fp)

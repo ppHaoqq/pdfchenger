@@ -46,9 +46,9 @@ for excel_path in file_list:
     ws['D1'] = '稼働状況'
 
     # 受注件数取得
-    cell_o = list(data_sheet.columns)[16]
+    cell_q = list(data_sheet.columns)[16]
     # o列＝落差状況をリスト化、見出しを抜いたデータの個数で判断
-    ws['G1'] = (len([o.value for o in cell_o if not o.value == None]) - 1)
+    ws['G1'] = (len([q.value for q in cell_q if not q.value == None]) - 1)
     # 下記をリスト内包表記してる
     # o_list = []
     # for o in cell_o:
@@ -58,22 +58,23 @@ for excel_path in file_list:
 
     # 受注金額取得
     # 落札決定、且つ、値が数値のものを抽出
-    cell_l = list(data_sheet.columns)[12]
+    cell_m = list(data_sheet.columns)[13]
     # 金額合計用変数
     total_plice = 0
     # 判定のため2行展開
-    for l_obj, o_obj in zip(cell_l, cell_o):
-        l = l_obj.value.replace(',', '')
-        o = o_obj.value
+    for m_obj, q_obj in zip(cell_m, cell_q):
+        m = m_obj.value.replace(',', '')
+        q = q_obj.value
         # L行はカンマを削除後、数値判定（カンマ入りは全部Falseになる）
         # 条件を満たすものを合算
-        if not o == None and l.isnumeric():
-            total_plice += int(l)
+        if not q == None and m.isnumeric():
+            total_plice += int(m)
     ws['G2'] = total_plice
+    ws['G2'].number_format = "#,##0."
 
     # 企業点取得
-    subtotal1 = list(data_sheet.columns)[28]
-    subtotal2 = list(data_sheet.columns)[30]
+    subtotal1 = list(data_sheet.columns)[29]
+    subtotal2 = list(data_sheet.columns)[31]
     date = list(data_sheet.columns)[8]
     # 日付の一覧をリスト化→最大値取得
 
@@ -101,12 +102,11 @@ for excel_path in file_list:
     campany = data_sheet['H2'].value
 
     # 転記用データ取得
-    t = list(data_sheet.columns)[21]
+    t = list(data_sheet.columns)[22]
 
     # データ整形
     for t_obj in t:
         score = t_obj.value
-
         # 書き込み列取得, 空欄除去
         b_row = list(ws.columns)[1]
         b_row = [b for b in b_row if not b.value == None]
@@ -121,11 +121,17 @@ for excel_path in file_list:
             # b_row 値を取得して再度リスト化
             if not int(score) in [r.value for r in b_row]:
                 # 最後尾の一つ下のセルに入力
-                ws.cell(row=b_end + 1, column=2, value=int(score))
+                ws.cell(row=b_end+1, column=2, value=int(score))
                 # 4列目を始点にアルファベットリストから取得、仮名作成
-                engineer = campany + ':' + al[b_end - 1]
+                engineer = campany + ':' + al[b_end-1]
                 # 最後尾の一つ下のセルに入力
-                ws.cell(row=b_end + 1, column=1, value=engineer)
+                ws.cell(row=b_end+1, column=1, value=engineer)
+                # 落札状況入力
+                situation = data_sheet['Q{}'.format(t_obj.row)].value
+                kouki = data_sheet['J{}'.format(t_obj.row)].value
+                if not situation == None and not situation == '落札状況':
+                    ws.cell(row=b_end+1, column=3, value=kouki)
+                    ws.cell(row=b_end+1, column=4, value=situation)
 
     # 最高技術者評定点取得
     # 既存の評点取得
@@ -135,7 +141,7 @@ for excel_path in file_list:
     for s in scores:
         # 最大値がより出かければ更新
         if str(s.value).isnumeric():
-            if int(s.value) > max_score:
+            if int(s.value) > max_score and not ws['D{}'.format(s.row)].value:
                 max_score = int(s.value)
     ws['K2'] = max_score
 
@@ -145,12 +151,12 @@ for excel_path in file_list:
 
     # 入札率取得
     # 入札価格のみリスト化
-    bid_list = list(data_sheet.columns)[12]
+    bid_list = list(data_sheet.columns)[13]
 
     # 列挿入
-    if not data_sheet['N1'].value == '入札率':
-        data_sheet.insert_cols(14)
-        data_sheet['N1'] = '入札率'
+    if not data_sheet['O1'].value == '入札率':
+        data_sheet.insert_cols(15)
+        data_sheet['O1'] = '入札率'
 
     # 入札価格と行番号取得
     for p in bid_list:
@@ -160,12 +166,12 @@ for excel_path in file_list:
             # 行番号をもとに該当する予定価格取得
             yotei = int(data_sheet[cell].value.replace('，', '').replace('円', ''))
             bid_rate = int(bid_val) / yotei
-            write_cell = 'N{}'.format(p.row)
+            write_cell = 'O{}'.format(p.row)
             # 該当する行番号に書き込み
             data_sheet[write_cell] = bid_rate
             # 集計フォームに集約、一覧取得後、中央値を表示
     # 　floot型のみリストに集計
-    bid_rates = [br.value for br in list(data_sheet.columns)[13] if type(br.value) == float]
+    bid_rates = [br.value for br in list(data_sheet.columns)[14] if type(br.value) == float]
     # 中央値・最低値　算出後100倍して小数点2以下丸め
     med = round(median(bid_rates) * 100, 2)
     mini = round(min(bid_rates) * 100, 2)

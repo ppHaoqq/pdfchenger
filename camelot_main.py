@@ -1,4 +1,5 @@
-# pdf →　excel ver4.0
+# pdf →　excel ver5.0
+
 import camelot
 import re
 from pathlib import Path, PurePath
@@ -21,7 +22,7 @@ tools = pyocr.get_available_tools()
 tool = tools[0]
 builder = pyocr.builders.TextBuilder()
 
-base_cols = ['社名', '工事名', '入札日', '基礎点', '施工体制評価点', '合算', '入札価格', '評価値', '評価値=>基準評価値', '落札状況']
+base_cols = ['社名', '工事名', '入札日', '工期', '基礎点', '施工体制評価点', '合算', '入札価格', '評価値', '評価値=>基準評価値', '落札状況']
 table_cols = ['社名', 'CPD', '同種類似工事施工経験', '工事成績', '優良技術者表彰', '小計1', '企業：同種類似工事施工経験',
               '企業：工事成績', '企業：工事に係る表彰', '企業：近隣地域での施工実績', '企業：災害支援に係る表彰等',
               '企業：事故及び不誠実な行為等に対する評価', '企業：小計', '企業：AS舗装、海上作業船団施工体制', '企業：小計2', 'A:加算点',
@@ -65,6 +66,9 @@ for target in targets:
 
     tables1 = camelot.read_pdf(str(target), pages='1', shift_text=[''])
     tables2 = camelot.read_pdf(str(target), pages='2', table_regions=['50, 876, 2202, 1509'])
+
+    print(i_name)
+    kouki = input('の工期を入力してください:')
     # 向きを整形
     df1 = tables1[0].df
     df1 = df1.drop(df1.index[[5]])
@@ -76,6 +80,7 @@ for target in targets:
     df2 = df2.drop(df2.columns[[7, 8, 9, 10]], axis=1)
     df2.insert(1, '工事名', i_name)
     df2.insert(2, '入札日', date)
+    df2.insert(3, '工期', kouki)
     df2.columns = base_cols
     df2.set_index('社名', inplace=True)
     # 一気に読みとった数字を分離
